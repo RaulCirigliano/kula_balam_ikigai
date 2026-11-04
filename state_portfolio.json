@@ -1,0 +1,26 @@
+{
+  "last_updated": "2026-11-04T14:14:01.655264+00:00",
+  "capital_total": 100.0,
+  "assets": {
+    "ETH_USDT": {
+      "market": "crypto",
+      "timeframe": "1h",
+      "allocated_usd": 50.0,
+      "in_position": false,
+      "entry_price": null,
+      "entry_time": null,
+      "initial_sl": null,
+      "amount": 0.0
+    },
+    "NVDA": {
+      "market": "stocks",
+      "timeframe": "1d",
+      "allocated_usd": 50.0,
+      "in_position": false,
+      "entry_price": null,
+      "entry_time": null,
+      "initial_sl": null,
+      "shares": 0.0
+    }
+  }
+}
