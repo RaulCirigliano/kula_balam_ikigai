@@ -1,0 +1,6 @@
+# Compatibilidad Linux / Windows
+*.sh text eol=lf
+*.py text eol=lf
+*.html text eol=lf
+*.parquet binary
+*.csv text

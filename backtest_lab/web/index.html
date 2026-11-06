@@ -19,20 +19,89 @@
     .panel-header { display: flex; justify-content: space-between; align-items: center; background: #1a2332; padding: 10px 15px; font-weight: 600; font-size: 0.85rem; border-bottom: 1px solid #232d3f; }
     textarea { flex: 1; width: 100%; background: #0b0f17; color: #a9b7c6; border: none; padding: 15px; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.88rem; resize: none; outline: none; line-height: 1.4; }
     #output { color: #50fa7b; white-space: pre-wrap; overflow-y: auto; }
-  </style>
+  
+    select {
+    }
+    select option {
+    }
+    select:focus {
+    }
+
+  
+    .controls { 
+      display: flex; 
+      gap: 16px; 
+      align-items: center; 
+    }
+    .select-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .select-group span {
+      color: #94a3b8;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    select.modern-select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-color: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      padding: 8px 36px 8px 14px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      min-width: 170px;
+      outline: none;
+      transition: all 0.2s ease;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 14px;
+    }
+    select.modern-select:hover {
+      border-color: #00d26a;
+      background-color: #243247;
+    }
+    select.modern-select:focus {
+      border-color: #00d26a;
+      box-shadow: 0 0 0 2px rgba(0, 210, 106, 0.2);
+    }
+    select.modern-select option {
+      background-color: #0f172a;
+      color: #f8fafc;
+      padding: 10px;
+    }
+
+</style>
 </head>
 <body>
-  <header>
+      <header>
     <h1>Kula Balam // Sandbox de Backtesting</h1>
     <div class="controls">
-      <label>Mercado:</label>
-      <select id="selCategory" onchange="actualizarTickers()">
-        <option value="crypto_1h">Cripto (1H - 2 Años)</option>
-        <option value="tradfi_1d">TradFi (1D - 5 Años)</option>
-      </select>
-      <label>Activo:</label>
-      <select id="selTicker"></select>
-      <button class="run" onclick="ejecutarEstrategia()">▶ Ejecutar Estrategia</button>
+      <div class="select-group">
+        <span>Mercado:</span>
+        <select id="selCategory" class="modern-select" onchange="actualizarTickers()"></select>
+      </div>
+
+      <div class="select-group">
+        <span>Activo:</span>
+        <select id="selTicker" class="modern-select">
+        </select>
+        <label for="selEstrategia" style="margin-left: 10px; font-weight: 500;">Estrategia Guardada:</label>
+        <select id="selEstrategia" class="modern-select" onchange="cargarCodigoEstrategia()">
+          <option value="">-- Cargar plantilla / auditoría --</option>
+        </select>
+    
+      </div>
+
+      <button class="run" onclick="runStrategy()">▶ Ejecutar Estrategia</button>
     </div>
   </header>
 
@@ -40,7 +109,7 @@
     <div class="panel">
       <div class="panel-header">
         <span>Fórmula / Script Python</span>
-        <button onclick="cargarPlantilla()">Reiniciar Plantilla</button>
+        <button type="button" id="btn-borrar-todo" onclick="borrarTodo()" class="btn" style="background-color: #e53e3e; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">Borrar Todo</button>
       </div>
       <textarea id="codeEditor" spellcheck="false"></textarea>
     </div>
@@ -54,154 +123,139 @@
     </div>
   </div>
 
+  
   <script>
-    let datasets = {};
+    let catalogoDatasets = {};
 
     async function cargarDatasets() {
+      const selCat = document.getElementById('selCategory');
+
       try {
         const res = await fetch('/api/datasets');
-        datasets = await res.json();
+        catalogoDatasets = await res.json();
+
+        selCat.innerHTML = '';
+        const cats = Object.keys(catalogoDatasets);
+        
+        cats.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat;
+          opt.textContent = cat === 'datos_historicos' ? 'Datos Históricos (Multimercado)' : cat;
+          selCat.appendChild(opt);
+        });
+
         actualizarTickers();
       } catch (err) {
-        console.error("Error cargando datasets:", err);
+        console.error('Error cargando datasets:', err);
       }
     }
 
     function actualizarTickers() {
-      const cat = document.getElementById('selCategory').value;
-      const selTicker = document.getElementById('selTicker');
-      selTicker.innerHTML = '';
-      if (datasets[cat]) {
-        datasets[cat].forEach(t => {
-          const opt = document.createElement('option');
-          opt.value = t;
-          opt.textContent = t;
-          selTicker.appendChild(opt);
-        });
-      }
+      const selCat = document.getElementById('selCategory');
+      const selTick = document.getElementById('selTicker');
+
+      const cat = selCat.value;
+      const items = catalogoDatasets[cat] || [];
+
+      selTick.innerHTML = '';
+      items.forEach(ticker => {
+        const opt = document.createElement('option');
+        opt.value = ticker;
+        opt.textContent = ticker;
+        selTick.appendChild(opt);
+      });
     }
 
-    function cargarPlantilla() {
-      document.getElementById('codeEditor').value = `import sys
-import pandas as pd
-import numpy as np
+    function borrarTodo() {
+      const editor = document.getElementById('codeEditor');
+      if (editor) editor.value = '';
 
-# 1. Carga automática del Parquet seleccionado en la web
-parquet_path = sys.argv[1]
-df = pd.read_parquet(parquet_path)
-
-if isinstance(df.columns, pd.MultiIndex):
-    df.columns = df.columns.get_level_values(0)
-df.columns = [c.lower() for c in df.columns]
-df.dropna(subset=['open', 'high', 'low', 'close'], inplace=True)
-
-# 2. Indicadores
-df['donchian_high_24'] = df['high'].rolling(24).max()
-df['donchian_low_24'] = df['low'].rolling(24).min()
-df['donchian_mid_12'] = (df['high'].rolling(12).max() + df['low'].rolling(12).min()) / 2
-df['ema_200'] = df['close'].ewm(span=200, adjust=False).mean()
-df['ema_24'] = df['close'].ewm(span=24, adjust=False).mean()
-df['bandwidth'] = (df['donchian_high_24'] - df['donchian_low_24']) / df['ema_24']
-df['bandwidth_sma48'] = df['bandwidth'].rolling(48).mean()
-
-# 3. Señales Short
-df['sig_breakout'] = (
-    (df['close'] < df['donchian_low_24'].shift(1)) &
-    (df['close'] < df['ema_200']) &
-    (df['bandwidth'] > df['bandwidth_sma48'])
-)
-
-quiebre_previo = (df['close'] < df['donchian_low_24'].shift(1)).rolling(12).max() > 0
-df['sig_pullback'] = (
-    quiebre_previo &
-    (df['high'] >= df['donchian_mid_12']) &
-    (df['close'] < df['donchian_mid_12']) &
-    (df['close'] < df['ema_200'])
-)
-
-# 4. Motor de simulación
-def simular(signal_col):
-    trades = []
-    closes = df['close'].values
-    mids = df['donchian_mid_12'].values
-    signals = df[signal_col].values
-    n = len(df)
-    i = 0
-    while i < n - 13:
-        if signals[i]:
-            entry_price = closes[i]
-            sl_price = entry_price * 1.015
-            trade_pnl = None
-            for step in range(1, 13):
-                idx = i + step
-                if closes[idx] >= sl_price:
-                    trade_pnl = -0.015 - 0.001
-                    break
-                elif closes[idx] > mids[idx]:
-                    trade_pnl = ((entry_price - closes[idx]) / entry_price) - 0.001
-                    break
-            if trade_pnl is None:
-                trade_pnl = ((entry_price - closes[i + 12]) / entry_price) - 0.001
-            trades.append(trade_pnl)
-            i += 13
-        else:
-            i += 1
-    return trades
-
-tb = simular('sig_breakout')
-tp = simular('sig_pullback')
-
-def metricas(trades, nombre):
-    if not trades:
-        return f"=== {nombre} ===\\nSin operaciones.\\n"
-    t = np.array(trades)
-    wins = t[t > 0]
-    losses = t[t <= 0]
-    wr = (len(wins) / len(t)) * 100
-    pnl = t.sum() * 100
-    pf = (wins.sum() / abs(losses.sum())) if len(losses) > 0 and losses.sum() != 0 else np.nan
-    return f"=== {nombre} ===\\nOperaciones: {len(t)}\\nWin Rate: {wr:.2f}%\\nPnL Acumulado: {pnl:+.2f}%\\nProfit Factor: {pf:.2f}\\n"
-
-print(f"Dataset Parquet: {len(df)} velas ({df.index[0]} a {df.index[-1]})\\n")
-print(metricas(tb, "DONCHIAN BREAKOUT SHORT (VENTA EN PISO - 2 AÑOS)"))
-print(metricas(tp, "DONCHIAN PULLBACK SHORT (VENTA EN REBOTE - 2 AÑOS)"))
-`;
+      const output = document.getElementById('output');
+      if (output) output.value = '';
     }
 
-    async function ejecutarEstrategia() {
-      const out = document.getElementById('output');
-      out.value = "Calculando backtest local sobre archivo Parquet...\n";
-      
-      const payload = {
-        category: document.getElementById('selCategory').value,
-        ticker: document.getElementById('selTicker').value,
-        code: document.getElementById('codeEditor').value
-      };
+    function copiarResultados() {
+      const output = document.getElementById('output');
+      navigator.clipboard.writeText(output.value);
+    }
+
+    async function runStrategy() {
+      const codeEditor = document.getElementById('codeEditor');
+      const output = document.getElementById('output');
+      const selCat = document.getElementById('selCategory');
+      const selTick = document.getElementById('selTicker');
+
+
+      const codeVal = codeEditor.value;
+      const catVal = selCat ? selCat.value : 'datos_historicos';
+      const tickVal = selTick ? selTick.value : '';
+
+      output.value = 'Ejecutando backtest... por favor espera...';
 
       try {
         const res = await fetch('/api/run', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            category: catVal,
+            ticker: tickVal,
+            code: codeVal
+          })
         });
+
         const data = await res.json();
-        out.value = data.output;
+        if (data.output !== undefined) {
+          output.value = data.output;
+        } else {
+          output.value = JSON.stringify(data, null, 2);
+        }
       } catch (err) {
-        out.value = "Error al conectar con el backend local: " + err;
+        output.value = 'Error de conexión: ' + err.message;
       }
     }
 
-    function copiarResultados() {
-      const out = document.getElementById('output');
-      out.select();
-      document.execCommand('copy');
-      alert('¡Resultados copiados al portapapeles!');
+    
+    async function cargarListaEstrategias() {
+      const selEst = document.getElementById('selEstrategia');
+
+      try {
+        const res = await fetch('/api/estrategias');
+        const lista = await res.json();
+        
+        selEst.innerHTML = '<option value="">-- Cargar plantilla / auditoría --</option>';
+        lista.forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = item;
+          opt.textContent = item;
+          selEst.appendChild(opt);
+        });
+      } catch (err) {
+        console.error('Error cargando estrategias:', err);
+      }
     }
 
-    window.onload = () => {
+    async function cargarCodigoEstrategia() {
+      const selEst = document.getElementById('selEstrategia');
+      const editor = document.getElementById('codeEditor');
+
+      try {
+        const res = await fetch('/api/estrategias/' + encodeURIComponent(selEst.value));
+        const data = await res.json();
+        if (data.codigo) {
+          editor.value = data.codigo;
+        }
+      } catch (err) {
+        console.error('Error al obtener código:', err);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      cargarListaEstrategias();
       cargarDatasets();
-      cargarPlantilla();
-    };
+      const editor = document.getElementById('codeEditor');
+      if (editor) editor.value = '';
+    });
   </script>
+
 </body>
 </html>

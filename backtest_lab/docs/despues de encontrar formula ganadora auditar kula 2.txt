@@ -1,0 +1,41 @@
+El veredicto del arquitecto coincide punto por punto con el diagnóstico cuantitativo: **hay que separar tajantemente la ejecución blindada de la hipótesis no testeada**.
+
+El peligro real en este momento no es el mercado, sino la arquitectura: si la máquina corre microservicios (puertos 8520, 18767), bases SQLite y modelos locales a la vez, cualquier cuello de botella o latencia puede romper una orden antes de que la matemática haga su trabajo.
+
+Para depurar esos puntos negros y dejar el sistema operando sin sesgos, la división entre **lo probado** y **lo en revisión** queda formalizada así:
+
+---
+
+### 1. Bloque de Ejecución (Lo Probado — Innegociable)
+
+Este bloque se ejecuta de forma determinista y sin pedir autorización a capas complejas:
+
+* **Disparador:** Ruptura Donchian 20 en 1H con compresión de ancho ($\le 4.5\times\text{ATR}$) y volumen $+25\%$.
+* **Filtro de régimen directo:** Cierre por encima de $\text{EMA}_{100}$ con pendiente positiva.
+* **Microestructura en `quant_risk.py`:**
+* Stop Loss inicial a $-1.5\times\text{ATR}$.
+* Candado de comisiones: al alcanzar $+0.40\%$ bruto, mover Stop a $+0.25\%$ bruto (Break-Even real que absorbe el $0.15\%$ de comisiones de Binance).
+* Salida dinámica estricta por `MID_EXIT` (cierre bajo mitad de canal).
+
+
+
+---
+
+### 2. Bloque de Revisión (Lo Posible — Solo Observación en Ledger)
+
+Las estrategias cualitativas o secundarias (`cava_ruiz`, `wyckoff_bulkowski`, y análisis heurísticos) **no deben bloquear ni autorizar órdenes con dinero real** hasta que demuestren su valor en el registro:
+
+* **Registro pasivo:** Cuando el sistema ejecute una entrada por Donchian 1H, los módulos de Wyckoff y Cava Ruiz simplemente graban una etiqueta en `trading_ledger.sqlite3` indicando si ellos habrían entrado o no.
+* **Cero interferencia:** No se permite que un fallo de conexión en los puertos locales aborte un ciclo del centinela de trading.
+* **Criterio de muestra ($N \ge 100$):** Al final de la semana o del mes, se consulta la base SQLite para comparar los números fríos:
+* Ganancia neta de las operaciones donde Wyckoff/Cava coincidieron vs. donde discreparon.
+* Si la coincidencia aumenta el Profit Factor neto, se promueve a filtro activo. Si no, se descarta sin haber arriesgado capital.
+
+
+
+---
+
+### Regla de Operación Inmediata
+
+1. **No tocar parámetros en caliente:** Ni mover el Stop Loss por intuición, ni cambiar la periodicidad de los Donchian.
+2. **Monitoreo exclusivo por ledger:** Dejar que el archivo `trading_ledger.sqlite3` acumule las ejecuciones reales con sus comisiones descontadas centavo a centavo.

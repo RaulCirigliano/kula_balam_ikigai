@@ -1,3 +1,4 @@
+from pathlib import Path
 import os
 import sys
 import subprocess
@@ -19,8 +20,10 @@ app.add_middleware(
 )
 
 # 1. Ruta absoluta exacta a tu Data Lake
-DATA_DIR = r"C:\Users\raulc\Desktop\proyectos\kula_balam_ikigai\data"
-WEB_DIR = r"C:\Users\raulc\Desktop\proyectos\kula_balam_ikigai\backtest_lab\web"
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = str(BASE_DIR / "data")
+BASE_DIR = Path(__file__).resolve().parent
+WEB_DIR = str(BASE_DIR / "web")
 
 class ExecutionRequest(BaseModel):
     category: str    # "crypto_1h" o "tradfi_1d"
@@ -67,6 +70,24 @@ def run_strategy(req: ExecutionRequest):
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
+
+# --- Endpoints de Estrategias Guardadas ---
+ESTRATEGIAS_DIR = BASE_DIR / "estrategias"
+
+@app.get("/api/estrategias")
+def list_estrategias():
+    if not ESTRATEGIAS_DIR.exists():
+        return []
+    archivos = sorted([f.name for f in ESTRATEGIAS_DIR.glob("*.py")])
+    return archivos
+
+@app.get("/api/estrategias/{nombre}")
+def get_estrategia(nombre: str):
+    script_path = ESTRATEGIAS_DIR / nombre
+    if not script_path.exists() or not script_path.is_file():
+        return {"error": "Archivo no encontrado", "codigo": ""}
+    return {"nombre": nombre, "codigo": script_path.read_text(encoding='utf-8')}
 
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 

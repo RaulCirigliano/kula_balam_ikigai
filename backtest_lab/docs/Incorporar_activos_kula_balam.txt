@@ -1,0 +1,388 @@
+Actúa como desarrollador e ingeniero cuantitativo para el backend de Kula Balam (puerto 18767, arquitectura determinista en Python).
+
+Necesito implementar y formalizar dos componentes estratégicos en el sistema sin romper la suite de regresiones (173 tests) ni la integridad del Ledger SQLite:
+
+---
+
+### TAREA 1: Refactorización y Calibración de `donchian_breakout_1h` (ETH/USDT)
+
+Optimizar la lógica de ejecución del canal Donchian de 1H para filtrar consolidaciones sin volumen y ajustar la salida estructural:
+
+1. **Parámetros del Canal:**
+   - Longitud de Ruptura (Entrada): `period_entry = 24` velas (24 horas).
+   - Longitud de Salida (`MID_EXIT`): `period_exit = 12` velas.
+2. **Filtro de Expansión de Volatilidad (Bandwidth Filter):**
+   - Calcular el ancho del canal: 
+     $$\text{bandwidth} = \frac{\text{Donchian\_High}_{24} - \text{Donchian\_Low}_{24}}{\text{EMA}(\text{Close}, 24)}$$
+   - Condición obligatoria previa al disparo:
+     $$\text{bandwidth} > \text{SMA}(\text{bandwidth}, 48)$$
+   - Si no hay expansión frente a su media de 48 períodos, descartar la señal por régimen de compresión lateral sin volumen.
+3. **Reglas de Ejecución:**
+   - **Gatillo BUY:** Vela cerrada con `Close > Donchian_High_{24}[-1]` Y filtro de expansión verificado.
+   - **Salida Estructural (`MID_EXIT`):** Vela cerrada con `Close < (Donchian_High_{12} + Donchian_Low_{12}) / 2`.
+   - **Stop Loss de Emergencia (Hard Limit):** Fijo en `-1.5%` desde el precio medio de entrada.
+   - **Protección de Breakeven:** Solo desplazar el Stop a Breakeven si el flotante favorable supera `1.2 * ATR_14` y fijar el nuevo Stop en `Precio_Entrada + (2 * round_trip_fee)`.
+
+---
+
+### TAREA 2: Implementación del Selector Dinámico de Momentum (Slot Cripto Dinámico: ETH vs. SOL)
+
+Para no duplicar exposición direccional en el portafolio, implementar una capa de selección dinámica sobre un único slot cripto activo:
+
+1. **Evaluación de Fuerza Relativa (RS):**
+   - Frecuencia: Cada 24 horas (al cierre de la vela de 00:00 UTC).
+   - Cálculo:
+     $$\text{RS} = \frac{\text{Rendimiento 7D}(\text{SOL/USDT})}{\text{Rendimiento 7D}(\text{ETH/USDT})}$$
+     (Calculado como $(\text{Close}_t / \text{Close}_{t-168}) - 1$).
+2. **Asignación del Patrullaje:**
+   - Si $\text{RS} > 1.10$: El slot cripto activo pasa a patrullar `SOL/USDT` bajo la misma lógica Donchian 1H (siempre que la correlación y volumen acompañen).
+   - Si $\text{RS} \le 1.10$: El slot cripto activo se mantiene en `ETH/USDT`.
+   - **Regla de Persistencia:** Si hay una posición abierta al momento del cálculo de las 00:00 UTC, NO rotar el activo hasta que dicha posición se cierre de forma natural (`MID_EXIT` o SL).
+
+---
+
+### TAREA 3: Integración del Slot Wall Street (TQQQ en 1D)
+
+Habilitar el slot de renta variable complementario a NVDA en timeframe diario:
+
+1. **Parámetros del Slot:**
+   - Ticker: `TQQQ`
+   - Timeframe: `1D` (evaluación únicamente al cierre oficial de mercado, 16:00 EST / ~17:00-17:30 ART).
+   - Lógica: `donchian_breakout_1d` con `period = 20`.
+   - Filtro Macro de Régimen: Exigir vela diaria con `Close > SMA(Close, 200)`.
+2. **Saneamiento de Datos:**
+   - Replicar el descarte estricto de filas con valores no finitos (`NaN`) en `_fetch_raw_ohlcv` previo a la validación, protegiendo el slot contra velas parciales de pre/post-market en Yahoo Finance.
+3. **Position Sizing y Gestión de Gaps:**
+   - Calcular el tamaño nocional asumiendo un Worst-Case Gap del `-6.0%`, de modo que un salto bajista de apertura no exceda la pérdida autorizada de `$0.50 USD`.
+
+---
+
+### REQUERIMIENTOS DE CÓDIGO Y ESTABILIDAD:
+- Mantener los contratos de datos existentes con `trading_ledger.sqlite3` y el motor determinista.
+- No introducir dependencias externas de scraping ni modelos locales.
+- Ejecutar y verificar que la suite de tests unitarios y de regresión (`pytest`) pase al 100%.
+- Documentar los cambios en el log del daemon y proveer el diff limpio de los archivos modificados.
+
+
+---------------------------------------------------
+
+
+import pytest
+import numpy as np
+import pandas as pd
+
+# Importar las funciones desde los módulos donde Antigravity las ubique:
+# from backend.indicators import compute_bandwidth, check_bandwidth_expansion_filter
+# from backend.selectors import compute_relative_strength_7d, select_crypto_slot
+
+
+# =====================================================================
+# LÓGICA DE REFERENCIA / CONTRATOS CUANTITATIVOS
+# =====================================================================
+
+def compute_bandwidth(df: pd.DataFrame, period_entry: int = 24) -> pd.Series:
+    """
+    Bandwidth = (Donchian_High_24 - Donchian_Low_24) / EMA(Close, 24)
+    """
+    high_n = df['high'].rolling(window=period_entry).max()
+    low_n = df['low'].rolling(window=period_entry).min()
+    ema_close = df['close'].ewm(span=period_entry, adjust=False).mean()
+    return (high_n - low_n) / ema_close
+
+
+def check_bandwidth_expansion_filter(
+    df: pd.DataFrame,
+    period_entry: int = 24,
+    sma_period: int = 48
+) -> bool:
+    """
+    Condición: Bandwidth[-1] > SMA(Bandwidth, 48)[-1]
+    """
+    bw = compute_bandwidth(df, period_entry=period_entry)
+    bw_sma = bw.rolling(window=sma_period).mean()
+    
+    if len(bw) < (period_entry + sma_period) or pd.isna(bw.iloc[-1]) or pd.isna(bw_sma.iloc[-1]):
+        return False
+        
+    return bool(bw.iloc[-1] > bw_sma.iloc[-1])
+
+
+def compute_relative_strength_7d(eth_close: pd.Series, sol_close: pd.Series, lookback: int = 168) -> float:
+    """
+    RS = Return_7D(SOL) / Return_7D(ETH)
+    """
+    if len(eth_close) <= lookback or len(sol_close) <= lookback:
+        raise ValueError("Longitud insuficiente para calcular retorno a 168 períodos (7D).")
+        
+    ret_eth = (eth_close.iloc[-1] / eth_close.iloc[-lookback - 1]) - 1.0
+    ret_sol = (sol_close.iloc[-1] / sol_close.iloc[-lookback - 1]) - 1.0
+    
+    if ret_eth == 0.0:
+        return float('inf') if ret_sol > 0 else float('-inf')
+        
+    return float(ret_sol / ret_eth)
+
+
+def select_crypto_slot(
+    eth_close: pd.Series,
+    sol_close: pd.Series,
+    has_open_position: bool = False,
+    current_symbol: str = "ETH/USDT",
+    threshold: float = 1.10
+) -> str:
+    """
+    Selector de slot cripto con persistencia de posición abierta.
+    """
+    if has_open_position:
+        return current_symbol
+        
+    rs = compute_relative_strength_7d(eth_close, sol_close, lookback=168)
+    if rs > threshold:
+        return "SOL/USDT"
+    return "ETH/USDT"
+
+
+# =====================================================================
+# BATERÍA 1: TEST DE FILTRO DE BANDWIDTH (DONCHIAN 1H)
+# =====================================================================
+
+class TestDonchianBandwidthFilter:
+    
+    def test_bandwidth_formula_exactness(self):
+        """Valida la precisión del cálculo aritmético del bandwidth con datos controlados."""
+        # 23 velas en rango [90, 100], vela 24 extiende a high=110, low=85
+        # Donchian High(24) = 110.0, Low(24) = 85.0 -> Rango = 25.0
+        # EMA(24) sobre serie constante de 100.0 = 100.0
+        # Bandwidth esperado = 25.0 / 100.0 = 0.25
+        data = {
+            'high': [100.0] * 23 + [110.0],
+            'low': [90.0] * 23 + [85.0],
+            'close': [100.0] * 24
+        }
+        df = pd.DataFrame(data)
+        bw = compute_bandwidth(df, period_entry=24)
+        
+        assert bw.iloc[-1] == pytest.approx(0.25, rel=1e-5)
+
+    def test_bandwidth_filter_blocks_on_compression(self):
+        """Valida que el filtro bloquee (False) en régimen lateral / compresión de volatilidad."""
+        # Primeras 80 velas de alta volatilidad (rango 30), seguidas de 40 velas muertas (rango 4)
+        highs = [120.0] * 80 + [102.0] * 40
+        lows = [90.0] * 80 + [98.0] * 40
+        closes = [105.0] * 80 + [100.0] * 40
+        
+        df = pd.DataFrame({'high': highs, 'low': lows, 'close': closes})
+        is_expanding = check_bandwidth_expansion_filter(df, period_entry=24, sma_period=48)
+        
+        assert is_expanding is False
+
+    def test_bandwidth_filter_approves_on_expansion(self):
+        """Valida que el filtro apruebe (True) en rompimiento con expansión genuina."""
+        # Primeras 100 velas planas (rango 2), últimas 20 rompiendo con rango 45
+        highs = [101.0] * 100 + [140.0] * 20
+        lows = [99.0] * 100 + [95.0] * 20
+        closes = [100.0] * 100 + [138.0] * 20
+        
+        df = pd.DataFrame({'high': highs, 'low': lows, 'close': closes})
+        is_expanding = check_bandwidth_expansion_filter(df, period_entry=24, sma_period=48)
+        
+        assert is_expanding is True
+
+    def test_bandwidth_insufficient_history(self):
+        """Valida que ante historial menor al calentamiento (entry + sma) devuelva False de forma segura."""
+        df_short = pd.DataFrame({
+            'high': [100.0] * 30,
+            'low': [95.0] * 30,
+            'close': [98.0] * 30
+        })
+        assert check_bandwidth_expansion_filter(df_short, period_entry=24, sma_period=48) is False
+
+
+# =====================================================================
+# BATERÍA 2: TEST DE MOMENTUM RELATIVO (RS) Y SELECTOR DE SLOT
+# =====================================================================
+
+class TestRelativeStrengthAndSlotSelector:
+
+    def test_rs_calculation_accuracy(self):
+        """Valida el cálculo del ratio de retornos a 168 períodos (7 días)."""
+        # ETH pasa de 1000 a 1100 (+10.0%)
+        # SOL pasa de 100 a 120 (+20.0%)
+        # RS = 0.20 / 0.10 = 2.0
+        n = 170
+        eth_prices = [1000.0] * n
+        eth_prices[-1] = 1100.0
+        sol_prices = [100.0] * n
+        sol_prices[-1] = 120.0
+        
+        eth_close = pd.Series(eth_prices)
+        sol_close = pd.Series(sol_prices)
+        
+        rs = compute_relative_strength_7d(eth_close, sol_close, lookback=168)
+        assert rs == pytest.approx(2.0, rel=1e-5)
+
+    def test_slot_selection_rotates_to_sol_when_rs_exceeds_threshold(self):
+        """Si RS > 1.10 y no hay posición activa, debe seleccionar SOL/USDT."""
+        n = 170
+        eth_prices = [1000.0] * n
+        eth_prices[-1] = 1050.0  # +5%
+        sol_prices = [100.0] * n
+        sol_prices[-1] = 110.0   # +10% -> RS = 2.0 > 1.10
+        
+        selected = select_crypto_slot(
+            pd.Series(eth_prices),
+            pd.Series(sol_prices),
+            has_open_position=False,
+            current_symbol="ETH/USDT",
+            threshold=1.10
+        )
+        assert selected == "SOL/USDT"
+
+    def test_slot_selection_retains_eth_when_rs_below_threshold(self):
+        """Si RS <= 1.10, debe mantener el patrullaje en ETH/USDT."""
+        n = 170
+        eth_prices = [1000.0] * n
+        eth_prices[-1] = 1100.0  # +10%
+        sol_prices = [100.0] * n
+        sol_prices[-1] = 108.0   # +8% -> RS = 0.80 <= 1.10
+        
+        selected = select_crypto_slot(
+            pd.Series(eth_prices),
+            pd.Series(sol_prices),
+            has_open_position=False,
+            current_symbol="ETH/USDT",
+            threshold=1.10
+        )
+        assert selected == "ETH/USDT"
+
+    def test_slot_selection_locks_when_position_is_open(self):
+        """Regla crítica de persistencia: si hay posición abierta, NO rota aunque RS sea masivo."""
+        n = 170
+        eth_prices = [1000.0] * n
+        eth_prices[-1] = 1020.0  # +2%
+        sol_prices = [100.0] * n
+        sol_prices[-1] = 130.0   # +30% -> RS = 15.0 >> 1.10
+        
+        # Posición activa en ETH/USDT
+        selected = select_crypto_slot(
+            pd.Series(eth_prices),
+            pd.Series(sol_prices),
+            has_open_position=True,
+            current_symbol="ETH/USDT",
+            threshold=1.10
+        )
+        # Debe blindar la posición y no cambiar el ticker patrullado
+        assert selected == "ETH/USDT"
+        
+        
+        
+        
+        --------------------------------------------
+        
+        
+        
+        Actúa como desarrollador cuantitativo de Kula Balam.
+
+Implementa la integración del activo URA (Global X Uranium ETF) como slot TradFi 1D en el motor Donchian:
+
+1. **Parámetros del Slot:**
+   - Ticker: `URA`
+   - Timeframe: `1D` (evaluación al cierre de mercado 16:00 EST).
+   - Donchian Entry: `period = 20`.
+   - Donchian Exit (MID_EXIT): `period = 10`.
+   - Filtro Macro: `Close > SMA(Close, 200)`.
+   - Filtro Bandwidth: `Bandwidth(20) > SMA(Bandwidth, 40)`.
+
+2. **Gestión de Riesgo:**
+   - Riesgo por trade: `$0.50 USD`.
+   - Sizing calculado sobre Worst-Case Gap del `-5.0%` (exposición máxima: `$10.00 USD`).
+   - Stop Loss de emergencia en memoria: `-2.5%`.
+
+3. **Requisitos de Integración:**
+   - Saneamiento de velas NaN en _fetch_raw_ohlcv idéntico al de NVDA.
+   - Registrar la estrategia bajo el identificador `donchian_breakout_1d_ura`.
+   - Asegurar que no interfiera con el patrullaje de ETH (1H) ni NVDA (1D).
+   - Validar ejecución con la suite de tests unitarios antes de commitear.
+   
+   
+   
+   
+   ------------------------------------------------
+   
+   
+   Actúa como desarrollador e ingeniero cuantitativo de Kula Balam (backend determinista en Python, puerto 18767, persistencia en trading_ledger.sqlite3).
+
+Implementa la arquitectura cuantitativa completa aprobada por el CIO, compuesta por 3 módulos de ejecución, sus filtros matemáticos y la suite de pruebas en pytest:
+
+====================================================================
+MÓDULO 1: REFACTORIZACIÓN DONCHIAN 1H Y SELECTOR DE MOMENTUM (SLOT CRIPTO)
+====================================================================
+1. Parámetros Donchian 1H:
+   - Canal de Ruptura (Entrada): period_entry = 24 velas horarias.
+   - Longitud de Salida (MID_EXIT): period_exit = 12 velas horarias.
+   - Stop Loss de Emergencia: Fijo en -1.5% desde el precio medio de entrada.
+   - Salida Estructural: Vela 1H cerrada por debajo de (High_12 + Low_12) / 2.
+
+2. Filtro de Expansión de Canal (Bandwidth Filter):
+   - Bandwidth = (Donchian_High_24 - Donchian_Low_24) / EMA(Close, 24)
+   - Condición obligatoria previa al disparo de compra:
+     Bandwidth[-1] > SMA(Bandwidth, 48)[-1]
+   - Si no hay expansión de volatilidad frente a la media de 48 períodos, descartar la señal.
+
+3. Selector Dinámico de Momentum Relativo (Slot Cripto Único: ETH vs SOL):
+   - Frecuencia de evaluación: Diario al cierre de la vela de 00:00 UTC.
+   - Cálculo de Fuerza Relativa a 7 días (168 velas):
+     Return_7D = (Close_t / Close_{t-168}) - 1
+     RS = Return_7D(SOL/USDT) / Return_7D(ETH/USDT)
+   - Regla de Asignación:
+     * Si RS > 1.10 -> El slot cripto patrulla SOL/USDT bajo Donchian 1H.
+     * Si RS <= 1.10 -> El slot cripto patrulla ETH/USDT bajo Donchian 1H.
+   - Regla de Persistencia Crítica: Si hay una posición abierta al momento del cálculo a las 00:00 UTC, NO rotar el activo hasta que dicha posición se cierre de forma natural (MID_EXIT o SL).
+
+====================================================================
+MÓDULO 2: SLOTS TRADFI EN 1D (URA + TQQQ + NVDA EXISTENTE)
+====================================================================
+Integrar URA (Uranio ETF) y TQQQ (Nasdaq 3X) en timeframe diario (1D) al cierre de sesión oficial (16:00 EST / 17:30 ART):
+
+1. Parámetros URA (1D):
+   - Ticker: URA
+   - Donchian Entry: period = 20.
+   - Donchian MID_EXIT: period = 10.
+   - Filtro Macro: Close > SMA(Close, 200).
+   - Filtro Bandwidth: Bandwidth(20) > SMA(Bandwidth, 40).
+   - Risk Sizing: Riesgo fijo $0.50 USD. Worst-Case Gap calculado en -5.0% (Exposición máxima: $10.00 USD). SL de emergencia intradía: -2.5%.
+
+2. Parámetros TQQQ (1D):
+   - Ticker: TQQQ
+   - Donchian Entry: period = 20.
+   - Donchian MID_EXIT: period = 10.
+   - Filtro Macro: Close > SMA(Close, 200).
+   - Filtro Bandwidth: Bandwidth(20) > SMA(Bandwidth, 40).
+   - Risk Sizing: Riesgo fijo $0.50 USD. Worst-Case Gap calculado en -6.0% (Exposición máxima: $8.33 USD). SL de emergencia intradía: -3.0%.
+
+3. Blindaje de Feed de Datos:
+   - Aplicar descarte estricto de valores NaN en _fetch_raw_ohlcv previo a la validación de indicadores (idéntico a la solución de NVDA), para evitar fallos por datos parciales de pre/post-market de Yahoo Finance.
+
+====================================================================
+MÓDULO 3: INTEGRACIÓN DE SUITE DE PRUEBAS UNITARIAS (PYTEST)
+====================================================================
+Crear el archivo `tests/test_donchian_and_momentum.py` con pruebas unitarias deterministas que validen:
+1. Precisión matemática de la fórmula de Bandwidth con datos sintéticos controlados.
+2. Bloqueo de compras cuando el Bandwidth está por debajo de SMA(Bandwidth, 48).
+3. Aprobación de compra cuando el Bandwidth quiebra al alza la SMA(Bandwidth, 48).
+4. Descarte seguro (False) si el historial es menor a entry + sma períodos.
+5. Precisión del cálculo de RS a 168 velas (7D) entre ETH y SOL.
+6. Rotación a SOL/USDT cuando RS > 1.10 sin posición abierta.
+7. Retención de ETH/USDT cuando RS <= 1.10.
+8. Persistencia y bloqueo de rotación cuando hay posición activa, independientemente del RS.
+
+====================================================================
+REQUERIMIENTOS DE CÓDIGO Y ESTABILIDAD:
+====================================================================
+- No agregar dependencias pesadas ni frameworks de inferencia externa.
+- Mantener la integridad de la base contable por partida doble (trading_ledger.sqlite3).
+- Ejecutar `pytest` y confirmar que todos los tests (los 173 existentes más los nuevos) pasen al 100%.
+- Generar el diff limpio de las modificaciones realizadas.
+   
+   
+

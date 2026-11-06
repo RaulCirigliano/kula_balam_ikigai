@@ -1,0 +1,626 @@
+A continuación se desglosan las estrategias operativas extraídas de cada fuente y video proporcionado, enfocadas estrictamente en la observación de velas japonesas, acción del precio y marcadores/indicadores técnicos, presentadas de manera individual e independiente con su respectiva referencia de origen.
+
+---
+
+### 1. Estrategia Tendencial Multimarcador (EMA Rápida/Lenta + RSI + ATR)
+
+* **Fuente:** *Video 2 sobre automatización de bots / optimización de algoritmos con Claude*.
+
+
+* **Indicadores y Marcadores:**
+* Dos Medias Móviles Exponenciales (EMA rápida de 21 periodos y EMA lenta de 89 periodos en 4 horas).
+
+
+* RSI (14 periodos) para medir el *momentum*.
+
+
+* ATR (*Average True Range*) para cuantificar la volatilidad.
+
+
+
+
+* **Lectura de Velas y Condición de Entrada:**
+* El gráfico de velas debe mostrar una tendencia alcista activa.
+
+
+* La EMA rápida debe cruzar y situarse por encima de la EMA lenta.
+
+
+* El RSI debe situarse estrictamente por debajo de 75 (evitando entrar en sobrecompra extrema).
+
+
+* Entrada: Se ejecuta una posición de compra en largo inmediatamente tras la confirmación de estas tres condiciones en el cierre de la vela.
+
+
+
+
+* **Gestión de Salida:**
+* **Stop Loss:** Alejado, calculado mediante un múltiplo del marcador ATR.
+
+
+* **Take Profit:** Proyectado a distancia larga mediante ATR o fijado a un ratio objetivo tendencial.
+
+
+
+
+
+---
+
+### 2. Estrategia de Scalping Dinámico con RSI Ultracorto, ADX y EMA 50
+
+* **Fuente:** *Video tutorial de Scalping en 5 minutos con tres indicadores*.
+
+
+* **Indicadores y Marcadores:**
+* EMA de 50 periodos (filtro direccional).
+
+
+* RSI de 3 periodos (marcador de momentum ultra sensible).
+
+
+* ADX de 5 periodos (marcador de fuerza de volatilidad).
+
+
+
+
+* **Lectura de Velas y Condición de Entrada (Ejemplo Largo):**
+* Las velas deben cotizar por encima de la EMA 50 (con la media inclinada hacia arriba).
+
+
+* El retroceso debe apoyarse en un nivel de soporte horizontal previo o formar un patrón de reversión (cuña/giro).
+
+
+* El ADX debe marcar una lectura superior a 30.
+
+
+* El RSI (3) debe descender por debajo de 20 (sobreventa).
+
+
+* **Gatillo de Vela:** Se entra al mercado en el precio máximo de la primera **vela verde fuerte/contundente** que saca al RSI de la sobreventa (descartar si la vela es débil).
+
+
+
+
+* **Gestión de Salida:**
+* **Stop Loss:** Inmediatamente por debajo del mínimo de la vela de señal verde (+2 ticks de margen).
+
+
+* **Take Profit:** Ratio riesgo-beneficio fijo de 1:1 a 1.5:1 (o hasta 2:1).
+
+
+
+
+
+---
+
+### 3. Estrategia Reversión / Retesteo con Marcador VWAP
+
+* **Fuente:** *Video y Guía Maestra para operar con el VWAP institucional*.
+
+
+* **Indicadores y Marcadores:**
+* Línea VWAP (*Volume-Weighted Average Price*) de la sesión.
+
+
+* Niveles de soporte y resistencia horizontales previos.
+
+
+
+
+* **Lectura de Velas y Condición de Entrada (Ejemplo Corto):**
+* **Sesgo:** El precio de las velas debe cotizar consolidado por debajo del VWAP diario (tendencia bajista).
+
+
+* **Pullback:** Esperar un retroceso de las velas hacia la línea del VWAP.
+
+
+* **Confirmación de Vela:** No colocar órdenes límite a ciegas; esperar a que las velas alcancen el VWAP y muestren rechazo mediante una formación o patrón de giro en el precio.
+
+
+
+
+* **Gestión de Salida:**
+* **Stop Loss:** Por encima de la línea del VWAP y del máximo estructural anterior.
+
+
+* **Take Profit:** Mínimo ratio riesgo-beneficio de 2:1, proyectado hacia el suelo del impulso previo.
+
+
+
+
+
+---
+
+### 4. Estrategia de Rebote en Soporte Dinámico (EMA 50 + Patrón Envolvente/Martillo)
+
+* **Fuente:** *Video sobre uso integral de medias móviles y acción del precio (Trading Lab)*.
+
+
+* **Indicadores y Marcadores:**
+* Media Móvil Exponencial (EMA 50) como soporte/resistencia dinámico.
+
+
+* Filtro de rango: Si el precio cruza erráticamente la EMA 50 en repetidas ocasiones, se prohíbe operar.
+
+
+
+
+* **Lectura de Velas y Condición de Entrada:**
+* El mercado debe encontrarse en una secuencia clara de máximos y mínimos tendenciales.
+
+
+* Se espera el retroceso (*pullback*) de las velas hasta contactar directamente con la EMA 50.
+
+
+* **Gatillo de Vela:** No entrar por el mero contacto; aguardar a que se cierre sobre la media una **vela envolvente** (*engulfing*) o un **martillo** (*hammer*) con mecha de rechazo evidente en dirección de la tendencia principal.
+
+
+
+
+* **Gestión de Salida:**
+* **Stop Loss:** Situado detrás de la mecha de la vela de rechazo o por debajo de la curva de la media.
+
+
+* **Take Profit / Salida dinámica:** Mantener posición hasta que una vela cierre claramente al otro lado de la media (gestión objetiva) o hasta el máximo previo.
+
+
+
+
+
+---
+
+### 5. Estrategia Contratendencial de Retorno a la Media con RSI
+
+* **Fuente:** *Video de estrategias con medias móviles y osciladores de agotamiento*.
+
+
+* **Indicadores y Marcadores:**
+* Media Móvil Tendencial (EMA 50 o SMA 200).
+
+
+* Oscilador RSI.
+
+
+
+
+* **Lectura de Velas y Condición de Entrada:**
+* Se detecta que el precio de las velas se ha separado o extendido de forma violenta y prolongada respecto a su media móvil.
+
+
+* El RSI entra en niveles extremos de sobreventa (para compras) o sobrecompra (para ventas).
+
+
+* Entrada: Se ejecuta en la vela que confirma el inicio de la corrección al salir del extremo.
+
+
+
+
+* **Gestión de Salida:**
+* **Take Profit:** La propia media móvil dinámica actúa obligatoriamente como el objetivo final de recogida de beneficios (no se busca nuevo máximo/mínimo).
+
+
+
+
+
+---
+
+### 6. Estrategia Fractal Multitemporal de Impulso y Pullback (3 Velas / Fibonacci + EMA 50)
+
+* **Fuente:** *Video «Con Esta Aburrida Estrategia He Ganado Un Concurso De Trading» (Alex Ruiz)*.
+
+
+* **Indicadores y Marcadores:**
+* Niveles de retroceso de Fibonacci (zonas 0.50, 0.618 y 0.75).
+
+
+* EMA de 50 periodos en temporalidad micro (5 minutos).
+
+
+
+
+* **Lectura de Velas y Procedimiento:**
+* **Diario (1D):** Localizar desaceleración en soporte/resistencia y confirmar un giro con una **gran vela direccional** (arranque institucional que define las siguientes 2 a 3 velas).
+
+
+* **4 Horas (4H):** Comprobar que la estructura rompa el máximo/mínimo anterior.
+
+
+* **1 Hora (1H):** Trazar Fibonacci sobre el impulso; vigilar retroceso desacelerado en velas que no supere el nivel de 0.66 a 0.75.
+
+
+* **Gatillo en 5 Minutos (5M):** Esperar a que una vela rompa con cuerpo y cierre a favor de la tendencia sobre la EMA 50.
+
+
+
+
+* **Gestión de Salida:**
+* **Stop Loss:** Fijado por debajo del nivel 0.75 de Fibonacci.
+
+
+* **Take Profit:** En los máximos del impulso estructural previo o extensión de Fibonacci (1.618).
+
+
+
+
+
+---
+
+### 7. Estrategia de Clúster de Volumen Horizontal y Gatillo "Fallo de MACD"
+
+* **Fuente:** *Video y sesión técnica de José Luis Cava y David Trullás*.
+
+
+* **Indicadores y Marcadores:**
+* Clúster de volumen horizontal (*tick* de mayor acumulación en cuerpo de velas previas).
+
+
+* Indicador MACD (búsqueda de fallo/suelos crecientes).
+
+
+* Divergencia de RSI con volumen decreciente en el testeo.
+
+
+
+
+* **Lectura de Velas y Condición de Entrada:**
+* **Paso 1 (Contexto):** Localizar hacia la izquierda en 1D o 1H una secuencia de velas de intención (cuerpos grandes sin mecha) y marcar el clúster horizontal en la mitad inferior de las velas.
+
+
+* **Paso 2 (Llegada):** El precio retrocede hacia dicho clúster y realiza un barrido de mecha para cazar liquidez.
+
+
+* **Paso 3 (Gatillo):** En gráfico de 1 a 3 minutos, el precio marca un nuevo mínimo en velas, pero el MACD no se corta a la baja (forma suelos crecientes = *Fallo de MACD*) y el RSI diverge.
+
+
+* Entrada: Al cierre de la vela de giro tras confirmarse el fallo técnico.
+
+
+
+
+* **Gestión de Salida:**
+* **Stop Loss:** En el mínimo exacto del barrido de la vela más 2 ticks de margen de seguridad.
+
+
+* **Take Profit:** Toma de 50% de beneficios en el siguiente clúster de volumen horizontal superior (pasando la posición a *Break-Even*) y seguimiento dinámico del resto.
+
+
+
+
+
+---
+
+### 8. Estrategia de Manipulación Institucional y Rotura (Smart Money / Marcador Recrew)
+
+* **Fuente:** *Masterclass de Mary Trading (NYS Markets ES) sobre SMC y liquidez*.
+
+
+* **Indicadores y Marcadores:**
+* Marcador / Indicador *Recrew* (para lectura algorítmica de máximos y mínimos estructurales).
+
+
+* Bloques de órdenes / velas de compradores/vendedores atrapados.
+
+
+
+
+* **Lectura de Velas y Condición de Entrada:**
+* **M5:** Identificar un máximo o mínimo anterior que es superado por una mecha de vela para sacar liquidez (manipulación institucional).
+
+
+* **M1:** Bajar de marco temporal inmediatamente tras el barrido; esperar a que una vela rompa con cuerpo la estructura contraria (*BOS* / cambio de carácter).
+
+
+* **Gatillo:** Localizar las últimas velas donde quedaron compradores atrapados (velas verdes previas a la caída) y programar la orden de entrada en el retroceso hacia esa zona estrecha.
+
+
+
+
+* **Gestión de Salida:**
+* **Stop Loss:** Por encima del máximo de la mecha manipuladora (con un margen que no exceda de 6 a 10 pips).
+
+
+* **Take Profit:** En los mínimos estructurales contrarios o liquidez externa.
+
+
+
+
+
+---
+
+### 9. Estrategia Multitemporal con Vela Envolvente en Soporte/Resistencia
+
+* **Fuente:** *Clase de ejecución de patrones técnicos y análisis multitemporal*.
+
+
+* **Indicadores y Marcadores:**
+* Niveles horizontales estáticos de soporte y resistencia.
+
+
+
+
+* **Lectura de Velas y Condición de Entrada:**
+* En temporalidad mayor (4H o 1D), el precio alcanza un nivel de soporte histórico relevante.
+
+
+* En temporalidad menor (15M o 5M), se espera que el precio frene y desarrolle una **vela envolvente alcista** (vela verde de rango amplio que envuelve completamente el cuerpo de la vela bajista previa).
+
+
+* Entrada: Se ingresa al mercado al cierre de la vela envolvente confirmada.
+
+
+
+
+* **Gestión de Salida:**
+* **Stop Loss:** Por debajo de la mecha mínima de la vela envolvente.
+
+
+* **Take Profit:** En la resistencia superior del gráfico de 4 horas, consiguiendo ratios de 1:2.6 o superiores gracias a la reducción del stop en marco menor.
+
+
+
+
+
+---
+
+### 10. Estrategia de Regímenes con Modelos Ocultos de Markov (HMM) + Consecución de Velas
+
+* **Fuente:** *Video sobre aplicación práctica de HMM y régimen de mercado*.
+
+
+* **Indicadores y Marcadores:**
+* Filtro cuantitativo HMM (clasifica el mercado en régimen de calma o estrés/volatilidad).
+
+
+* Media Móvil Exponencial (EMA).
+
+
+* Marcador ATR de volatilidad.
+
+
+
+
+* **Lectura de Velas y Condición de Entrada (Estrategia 116):**
+* El filtro HMM debe validar que el régimen actual es apto para compras tendenciales.
+
+
+* Se observa una serie consecutiva de **velas bajistas** en el gráfico.
+
+
+* A pesar de las velas bajistas, el precio de cierre se mantiene por encima de la EMA.
+
+
+* Entrada: Se abre posición en largo tras la desaceleración bajista.
+
+
+
+
+* **Gestión de Salida:**
+* **Take Profit:** Nivel calculado sumando al precio un valor de ATR multiplicado por un factor específico.
+
+
+* **Stop Loss:** Proyectado por debajo de la estructura del régimen según la volatilidad detectada.
+
+
+
+
+
+---
+
+### 11. Estrategia Mecánica "Menos es Más" (Triple Pantalla con EMA 50)
+
+* **Fuente:** *Video formativo sobre simplificación de trading con EMA 50 y acción del precio*.
+
+
+* **Indicadores y Marcadores:**
+* Exclusivamente la Media Móvil Exponencial de 50 periodos (EMA 50) aplicada en tres marcos temporales.
+
+
+
+
+* **Lectura de Velas y Gatillo:**
+* **1 Hora:** El precio reacciona sobre la EMA 50 o soporte/resistencia con velas de rechazo (mechas largas).
+
+
+* **5 Minutos:** Cambio de estructura con una vela que produce un nuevo máximo/mínimo relativo y retrocede hacia la EMA 50 de 5M.
+
+
+* **1 Minuto (Gatillo):** Entrada en el momento exacto en que una vela cruza y cierra a favor de la tendencia sobre la EMA 50 de 1M.
+
+
+
+
+* **Gestión de Salida:**
+* **Stop Loss Dinámico:** Se desplaza barra a barra acompañando la curva de la EMA 50 en 1M.
+
+
+* **Cierre Total:** La operación finaliza únicamente cuando una vela de 1M cierra al lado opuesto de la EMA 50.
+
+
+
+
+
+---
+
+¿Deseas profundizar en las reglas exactas de stop loss y take profit de alguna de estas estrategias en particular, o prefieres ver ejemplos con gráficos y parámetros para un activo específico?
+
+
+aca como salir del stoploss y take profit
+
+
+Las reglas exactas para la fijación y gestión del **Stop Loss (SL)** y del **Take Profit (TP)** varían según la lógica técnica de cada estrategia documentada en las fuentes:
+
+---
+
+### 1. Estrategia Fractal de Impulso y Pullback (Tres Velas / Fibonacci + EMA 50)
+
+* **Regla de Stop Loss (SL):**
+* Se ubica protegiendo de forma estricta el **siguiente nivel de Fibonacci válido**, fijado específicamente por debajo (en compras) o por encima (en ventas) del **nivel 0.75**.
+
+
+* *Filtro de invalidación:* Si el retroceso perfora o cierra más allá de 0.75, la hipótesis queda descartada al instante.
+
+
+* *Filtro de volatilidad mínima:* La distancia del stop respecto al precio de entrada debe cumplir la condición $\text{Distancia}_{SL} \ge 1.5 \times \text{ATR}_{14}$ en la temporalidad menor.
+
+
+
+
+* **Regla de Take Profit (TP):**
+* **Objetivo Estático:** En los máximos del impulso anterior (compras) o mínimos del impulso previo (ventas).
+
+
+* **Objetivo por Proyección:** En el nivel de **1.618 de la extensión de Fibonacci** (trazada desde el inicio del impulso, pasando por su final y proyectada al suelo/techo del pullback).
+
+
+
+
+
+---
+
+### 2. Estrategia de Scalping Mecánico (Gráfico de 5M: EMA 50 + RSI 3 + ADX 5)
+
+* **Regla de Stop Loss (SL):**
+* **En Compras (Largos):** Por debajo del mínimo de la vela de señal verde (la que extrae al RSI de la sobreventa $< 20$), sumando **2 ticks de margen de seguridad**.
+
+
+* **En Ventas (Cortos):** Por encima del máximo de la vela de señal roja (la que extrae al RSI de la sobrecompra $> 80$), sumando **2 ticks de holgura**.
+
+
+
+
+* **Regla de Take Profit (TP):**
+* Relación riesgo-beneficio fija de **1:1 a 1.5:1** (extensible de forma excepcional hasta **2:1** para perfiles avanzados).
+
+
+
+
+
+---
+
+### 3. Metodología "Menos es Más" (Triple Pantalla con EMA 50)
+
+* **Regla de Stop Loss (SL):**
+* Se posiciona inicialmente ligeramente por encima/debajo de la **EMA 50 en el gráfico de 5M** o sobre el último máximo/mínimo decreciente previo.
+
+
+* **Trailing Stop Mecánico:** En cuanto el precio avanza a favor en 1M, el stop se desplaza barra a barra acompañando la curva de la **EMA 50 de 1 minuto**.
+
+
+
+
+* **Regla de Take Profit (TP):**
+* **Objetivo Inicial:** Mínimos o soportes previos identificados en 1H/5M como referencia orientativa.
+
+
+* **Salida Dinámica Total:** Se cierra el 100% de la posición en el momento exacto en que una **vela de 1M cruza y cierra al lado opuesto de la EMA 50 de 1M**.
+
+
+
+
+
+---
+
+### 4. Estrategia Institucional de Retesteo con VWAP
+
+* **Regla de Stop Loss (SL):**
+* **En Ventas:** Por encima de la línea del VWAP de la sesión **y** por encima del máximo estructural previo.
+
+
+* **En Compras:** Por debajo de la línea del VWAP **y** por debajo del mínimo estructural previo.
+
+
+
+
+* **Regla de Take Profit (TP):**
+* Ratio riesgo-beneficio mínimo de **2:1**, haciendo confluir el target con los mínimos o máximos estructurales previos.
+
+
+
+
+
+---
+
+### 5. Estrategia Cuantitativa Tendencial (Bots / Modelos con ATR)
+
+* **Regla de Stop Loss (SL):**
+* Calculado de forma dinámica mediante el indicador ATR de 14 períodos:
+
+
+
+$$\text{Precio de Stop Loss} = \text{Precio de Entrada} - (k_{\text{SL}} \times \text{ATR}_{14})$$
+
+
+
+*(sumando el producto para posiciones en corto)*.
+
+
+
+
+* **Regla de Take Profit (TP):**
+* Basado en volatilidad activa:
+
+$$\text{Precio de Take Profit} = \text{Precio de Entrada} + (k_{\text{TP}} \times \text{ATR}_{14})$$
+
+
+
+*(en modelos conservadores estáticos, un ratio fijo a 3R)*.
+
+
+
+
+
+---
+
+### 6. Estrategia de Clúster de Volumen y Gatillo "Fallo de MACD"
+
+* **Regla de Stop Loss (SL):**
+* Innegociable y rígido: en el mínimo/máximo exacto de la mecha de barrido en temporalidad menor (1M o 3M) **menos 2 ticks de margen de holgura**. *«El stop va a misa y jamás se aleja en pérdidas»*.
+
+
+
+
+* **Regla de Take Profit (TP en dos fases):**
+* **TP 1:** Al alcanzar el primer clúster horizontal superior o un ratio **1:2**, se liquida el **50% del volumen** y el Stop Loss se traslada al precio de entrada (**Break-Even**).
+
+
+* **TP 2 (Remanente):** El 50% restante se mantiene abierto con salida dinámica en temporalidad de 3 minutos cuando el **MACD se corte en contra** y el **RSI (14) pierda el nivel neutro de 50**.
+
+
+
+
+
+---
+
+### 7. Estrategia de Ruptura de Patrones Gráficos (Cuñas, Canales, Triángulos)
+
+* **Regla de Stop Loss (SL):**
+* Ubicado por encima del máximo del patrón (en ventas) o por debajo del mínimo del patrón (en compras), dejando margen adicional para cubrir testeos de resistencia diagonal, horizontal y formaciones de doble techo/suelo local.
+
+
+
+
+* **Regla de Take Profit (TP):**
+* **Salida Estática:** En la zona de origen del patrón (la base de la cuña o la altura proyectada de la figura).
+
+
+* **Salida Dinámica:** Cruce y cierre de vela al lado opuesto de la **EMA 20** (para salidas rápidas al primer retroceso) o de la **EMA 50** (para acompañar recorridos de tendencia amplia).
+
+
+
+
+
+---
+
+### 8. Protocolo Universal de Salidas Parciales y Break-Even
+
+* **Esquema de 2 Unidades:** Cierre del **50% de la posición** en el primer objetivo técnico (o ratio 1:2) pasando el stop a **Break-Even**; el 50% restante corre con trailing stop libre de riesgo.
+
+
+* **Esquema de 3 Fases (Crecimiento de Cuentas / 50% - 25% - 25%):**
+* **50%:** En los máximos/mínimos anteriores del gráfico horario.
+
+
+* **25%:** Al romper y confirmar el precio la **EMA 50 en gráfico de 1H**.
+
+
+* **25% final:** Al romper y confirmar la **EMA 50 en gráfico de 4H**.

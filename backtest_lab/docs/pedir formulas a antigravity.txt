@@ -1,0 +1,54 @@
+Acá tenés la lista exacta y el mensaje estructurado para pasarle a Antigravity, con el criterio de aislar únicamente las fórmulas matemáticas y dejar afuera todo el andamiaje pesado:
+
+---
+
+### Mensaje para pasarle a Antigravity:
+
+> "Quiero respaldar únicamente los módulos con lógica cuantitativa y matemática de `kula_balam` en una subcarpeta aislada llamada `legado/` dentro de `kula_balam_ikigai`. No quiero servidores web, ni bases de datos SQLite, ni llamadas a LLMs, ni dependencias de red.
+> Ayúdame a copiar exclusivamente estos archivos y carpetas a `kula_balam_ikigai/legado/`:
+> 1. **Cálculo de riesgo, dimensionamiento y fricción:**
+> * `backend/quant_risk.py` (contiene las ecuaciones de comisiones, slippage, R:R neto y Quarter-Kelly).
+> 
+> 
+> 
+> 
+> 2. **Cálculo de indicadores y series:**
+> * `backend/quant_analysis.py` (fórmulas vectorizadas de EMA, ATR, RSI y niveles de Fibonacci).
+> 
+> 
+> 
+> 
+> 3. **Lógica de entrada/salida de estrategias (solo las reglas algorítmicas):**
+> * `backend/estrategias/kula_balam_cava_ruiz.py` (reglas de la tríada y zonas Fibo).
+> 
+> 
+> * `backend/estrategias/alex_ruiz_triada_3velas.py` (lógica de gatillo en 5M y vetos estructurales).
+> 
+> 
+> * `backend/estrategias/nasdaq_araujo_vwap.py` (lógica de rechazo contra VWAP).
+> 
+> 
+> * `backend/estrategias/mean_reversion_atr.py` (reversión estadística de volatilidad).
+> 
+> 
+> 
+> 
+> 
+> 
+> **Descarte explícito (NO copiar a legado):**
+> * Excluir `main.py`, `daemon.py`, servidores FastAPI y Uvicorn.
+> 
+> 
+> * Excluir `entry_gate.py` con llamadas a Ollama/Gemini o sockets.
+> 
+> 
+> * Excluir `telegram_notifier.py`, archivos `.sqlite3` y código HTML/CSS/JS.
+> 
+> 
+> 
+> 
+> El objetivo de `legado/` es que funcione como una biblioteca estática de consulta limpia para ir extrayendo funciones puras hacia `src/` a medida que desarrollemos los hitos."
+
+---
+
+Con esto, Antigravity sabrá exactamente qué podar y no contaminará el entorno nuevo con dependencias cruzadas.

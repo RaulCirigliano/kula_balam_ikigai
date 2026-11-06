@@ -138,3 +138,19 @@ def calcular_position_sizing(
         "cap_invertido": capital_real,
         "dist_sl": dist_sl
     }
+
+def compute_donchian_breakout_signals(df, period: int = 20):
+    df = df.copy()
+    # Canales sobre velas cerradas previas (shift 1)
+    df['donchian_upper'] = df['high'].shift(1).rolling(window=period).max()
+    df['donchian_lower'] = df['low'].shift(1).rolling(window=period).min()
+    df['donchian_mid'] = (df['donchian_upper'] + df['donchian_lower']) / 2.0
+    
+    # Filtro EMA 200
+    df['ema_200'] = df['close'].ewm(span=200, adjust=False).mean()
+    
+    # Senales de quiebre y salida estructural
+    df['signal_buy'] = (df['close'] > df['donchian_upper']) & (df['close'] > df['ema_200'])
+    df['signal_exit'] = df['close'] < df['donchian_mid']
+    
+    return df
