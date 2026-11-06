@@ -1,5 +1,10 @@
-﻿__pycache__/
+﻿data/
+*.parquet
+*.csv
+*.feather
+__pycache__/
 *.pyc
-venv/
-.env
+.pytest_cache/
 *.log
+venv/
+.venv/
