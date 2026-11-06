@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Kula Balam - Laboratorio de Estrategias</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #0f141c; color: #e1e7ec; padding: 20px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #232d3f; padding-bottom: 15px; margin-bottom: 20px; }
+    h1 { font-size: 1.4rem; color: #00d26a; }
+    .controls { display: flex; gap: 15px; align-items: center; }
+    select, button { background: #1a2332; color: #fff; border: 1px solid #33445c; padding: 8px 14px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; }
+    select:focus, button:focus { outline: none; border-color: #00d26a; }
+    button.run { background: #008744; font-weight: bold; }
+    button.run:hover { background: #00a854; }
+    button.copy { background: #2c3e50; }
+    .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; height: calc(100vh - 120px); }
+    .panel { display: flex; flex-direction: column; background: #161e2b; border: 1px solid #232d3f; border-radius: 8px; overflow: hidden; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; background: #1a2332; padding: 10px 15px; font-weight: 600; font-size: 0.85rem; border-bottom: 1px solid #232d3f; }
+    textarea { flex: 1; width: 100%; background: #0b0f17; color: #a9b7c6; border: none; padding: 15px; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.88rem; resize: none; outline: none; line-height: 1.4; }
+    #output { color: #50fa7b; white-space: pre-wrap; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Kula Balam // Sandbox de Backtesting</h1>
+    <div class="controls">
+      <label>Mercado:</label>
+      <select id="selCategory" onchange="actualizarTickers()">
+        <option value="crypto_1h">Cripto (1H - 2 Años)</option>
+        <option value="tradfi_1d">TradFi (1D - 5 Años)</option>
+      </select>
+      <label>Activo:</label>
+      <select id="selTicker"></select>
+      <button class="run" onclick="ejecutarEstrategia()">▶ Ejecutar Estrategia</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="panel">
+      <div class="panel-header">
+        <span>Fórmula / Script Python</span>
+        <button onclick="cargarPlantilla()">Reiniciar Plantilla</button>
+      </div>
+      <textarea id="codeEditor" spellcheck="false"></textarea>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span>Consola de Resultados</span>
+        <button class="copy" onclick="copiarResultados()">📋 Copiar Resultados</button>
+      </div>
+      <textarea id="output" readonly placeholder="Los resultados del backtest aparecerán aquí..."></textarea>
+    </div>
+  </div>
+
+  <script>
+    let datasets = {};
+
+    async function cargarDatasets() {
+      try {
+        const res = await fetch('/api/datasets');
+        datasets = await res.json();
+        actualizarTickers();
+      } catch (err) {
+        console.error("Error cargando datasets:", err);
+      }
+    }
+
+    function actualizarTickers() {
+      const cat = document.getElementById('selCategory').value;
+      const selTicker = document.getElementById('selTicker');
+      selTicker.innerHTML = '';
+      if (datasets[cat]) {
+        datasets[cat].forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t;
+          opt.textContent = t;
+          selTicker.appendChild(opt);
+        });
+      }
+    }
+
+    function cargarPlantilla() {
+      document.getElementById('codeEditor').value = `import sys
+import pandas as pd
+import numpy as np
+
+# 1. Carga automática del Parquet seleccionado en la web
+parquet_path = sys.argv[1]
+df = pd.read_parquet(parquet_path)
+
+if isinstance(df.columns, pd.MultiIndex):
+    df.columns = df.columns.get_level_values(0)
+df.columns = [c.lower() for c in df.columns]
+df.dropna(subset=['open', 'high', 'low', 'close'], inplace=True)
+
+# 2. Indicadores
+df['donchian_high_24'] = df['high'].rolling(24).max()
+df['donchian_low_24'] = df['low'].rolling(24).min()
+df['donchian_mid_12'] = (df['high'].rolling(12).max() + df['low'].rolling(12).min()) / 2
+df['ema_200'] = df['close'].ewm(span=200, adjust=False).mean()
+df['ema_24'] = df['close'].ewm(span=24, adjust=False).mean()
+df['bandwidth'] = (df['donchian_high_24'] - df['donchian_low_24']) / df['ema_24']
+df['bandwidth_sma48'] = df['bandwidth'].rolling(48).mean()
+
+# 3. Señales Short
+df['sig_breakout'] = (
+    (df['close'] < df['donchian_low_24'].shift(1)) &
+    (df['close'] < df['ema_200']) &
+    (df['bandwidth'] > df['bandwidth_sma48'])
+)
+
+quiebre_previo = (df['close'] < df['donchian_low_24'].shift(1)).rolling(12).max() > 0
+df['sig_pullback'] = (
+    quiebre_previo &
+    (df['high'] >= df['donchian_mid_12']) &
+    (df['close'] < df['donchian_mid_12']) &
+    (df['close'] < df['ema_200'])
+)
+
+# 4. Motor de simulación
+def simular(signal_col):
+    trades = []
+    closes = df['close'].values
+    mids = df['donchian_mid_12'].values
+    signals = df[signal_col].values
+    n = len(df)
+    i = 0
+    while i < n - 13:
+        if signals[i]:
+            entry_price = closes[i]
+            sl_price = entry_price * 1.015
+            trade_pnl = None
+            for step in range(1, 13):
+                idx = i + step
+                if closes[idx] >= sl_price:
+                    trade_pnl = -0.015 - 0.001
+                    break
+                elif closes[idx] > mids[idx]:
+                    trade_pnl = ((entry_price - closes[idx]) / entry_price) - 0.001
+                    break
+            if trade_pnl is None:
+                trade_pnl = ((entry_price - closes[i + 12]) / entry_price) - 0.001
+            trades.append(trade_pnl)
+            i += 13
+        else:
+            i += 1
+    return trades
+
+tb = simular('sig_breakout')
+tp = simular('sig_pullback')
+
+def metricas(trades, nombre):
+    if not trades:
+        return f"=== {nombre} ===\\nSin operaciones.\\n"
+    t = np.array(trades)
+    wins = t[t > 0]
+    losses = t[t <= 0]
+    wr = (len(wins) / len(t)) * 100
+    pnl = t.sum() * 100
+    pf = (wins.sum() / abs(losses.sum())) if len(losses) > 0 and losses.sum() != 0 else np.nan
+    return f"=== {nombre} ===\\nOperaciones: {len(t)}\\nWin Rate: {wr:.2f}%\\nPnL Acumulado: {pnl:+.2f}%\\nProfit Factor: {pf:.2f}\\n"
+
+print(f"Dataset Parquet: {len(df)} velas ({df.index[0]} a {df.index[-1]})\\n")
+print(metricas(tb, "DONCHIAN BREAKOUT SHORT (VENTA EN PISO - 2 AÑOS)"))
+print(metricas(tp, "DONCHIAN PULLBACK SHORT (VENTA EN REBOTE - 2 AÑOS)"))
+`;
+    }
+
+    async function ejecutarEstrategia() {
+      const out = document.getElementById('output');
+      out.value = "Calculando backtest local sobre archivo Parquet...\n";
+      
+      const payload = {
+        category: document.getElementById('selCategory').value,
+        ticker: document.getElementById('selTicker').value,
+        code: document.getElementById('codeEditor').value
+      };
+
+      try {
+        const res = await fetch('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        out.value = data.output;
+      } catch (err) {
+        out.value = "Error al conectar con el backend local: " + err;
+      }
+    }
+
+    function copiarResultados() {
+      const out = document.getElementById('output');
+      out.select();
+      document.execCommand('copy');
+      alert('¡Resultados copiados al portapapeles!');
+    }
+
+    window.onload = () => {
+      cargarDatasets();
+      cargarPlantilla();
+    };
+  </script>
+</body>
+</html>
